@@ -5,6 +5,12 @@ from telegram.ext import CommandHandler, ApplicationBuilder, ContextTypes
 import sys
 from flask import Flask
 import threading
+import nest_asyncio  # Fix for nested event loop issue
+
+# Apply nest_asyncio
+nest_asyncio.apply()
+
+# Add `libs` to system path
 sys.path.insert(0, "libs")
 
 # API and Bot Configuration
@@ -59,6 +65,7 @@ TEAM_NAMES_FARSI = {
     "Benfica": "بنفیکا",
 }
 
+# Fetch Events for a Given Fixture
 def fetch_events(fixture_id):
     url = f"https://api-football-v1.p.rapidapi.com/v3/fixtures/events?fixture={fixture_id}"
     response = requests.get(url, headers=HEADERS)
@@ -165,4 +172,4 @@ async def main():
     await application.run_polling()
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.get_event_loop().run_until_complete(main())
