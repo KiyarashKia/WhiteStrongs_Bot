@@ -1,10 +1,11 @@
 import requests
+import asyncio
 from telegram import Bot
 
 # API and Bot Configuration
 API_KEY = "6a3d20782bmsh74bb0e39633d701p1e82f2jsnf2647fda28bd"
 BOT_TOKEN = "8061695627:AAHGAo4SUZsZFcAWH_MPc8P0jDMMq-LTixA"
-CHANNEL_ID = "@WhiteStrongs_bot"
+CHANNEL_ID = "@TestWSbotter"
 HEADERS = {
     "x-rapidapi-host": "api-football-v1.p.rapidapi.com",
     "x-rapidapi-key": API_KEY
@@ -59,30 +60,44 @@ def format_event_farsi(event):
     event_type = event["type"]
     detail = event["detail"]
 
+
+
     # Translate team name to Farsi
     team_farsi = TEAM_NAMES_FARSI.get(team, team)
 
+
+    # Translate card type
+    if detail == "Yellow Card":
+        detail_farsi = "کارت زرد"
+    elif detail == "Red Card":
+        detail_farsi = "کارت قرمز"
+    else:
+        detail_farsi = detail
+        
     if event_type == "Goal":
         return f"گل برای {team_farsi} در دقیقه {time} توسط {player}"
     elif event_type == "Card":
-        return f"کارت {detail} برای {player} از تیم {team_farsi} در دقیقه {time}"
+        return f"کارت {detail_farsi} برای {player} از تیم {team_farsi} در دقیقه {time}"
     elif event_type == "subst":
         return f"تعویض برای {team_farsi}: {player} وارد بازی شد در دقیقه {time}"
     else:
         return f"رویداد دیگر ({event_type}) برای {team_farsi} در دقیقه {time}"
+    
+    
 
-# Send Message to Telegram Channel
-def send_to_telegram(message):
+# Send Message to Telegram Channel (Async)
+async def send_to_telegram(message):
     bot = Bot(token=BOT_TOKEN)
-    bot.send_message(chat_id=CHANNEL_ID, text=message)
+    await bot.send_message(chat_id=CHANNEL_ID, text=message)
 
-# Fetch and Send Events
-def main():
-    fixture_id = 1299071  # Real Madrid vs ...
+# Main Fetch and Send Events
+async def main():
+    fixture_id = 1299071  # Real Madrid vs Any
     events = fetch_events(fixture_id)
     for event in events:
         message = format_event_farsi(event)
-        send_to_telegram(message)
+        await send_to_telegram(message)
 
+# Run the Bot
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
