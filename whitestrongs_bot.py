@@ -1,6 +1,9 @@
 import requests
 import asyncio
 from telegram import Bot
+import sys
+sys.path.insert(0, "libs")
+
 
 # API and Bot Configuration
 API_KEY = "6a3d20782bmsh74bb0e39633d701p1e82f2jsnf2647fda28bd"
@@ -88,7 +91,7 @@ def format_event_farsi(event):
 # Send Message to Telegram Channel (Async)
 async def send_to_telegram(message):
     bot = Bot(token=BOT_TOKEN)
-    bot.send_message(chat_id=CHANNEL_ID, text=message)
+    await bot.send_message(chat_id=CHANNEL_ID, text=message)
 
 # Main Fetch and Send Events
 async def main():
@@ -96,8 +99,8 @@ async def main():
     events = fetch_events(fixture_id)
     for event in events:
         message = format_event_farsi(event)
-        send_to_telegram(message)
+        await send_to_telegram(message)
 
 # Run the Bot
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
