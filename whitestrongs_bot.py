@@ -88,7 +88,7 @@ def format_event_farsi(event):
 # Send Message to Telegram Channel (Async)
 async def send_to_telegram(message):
     bot = Bot(token=BOT_TOKEN)
-    await bot.send_message(chat_id=CHANNEL_ID, text=message)
+    bot.send_message(chat_id=CHANNEL_ID, text=message)
 
 # Main Fetch and Send Events
 async def main():
