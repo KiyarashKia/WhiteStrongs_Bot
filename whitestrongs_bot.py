@@ -1,11 +1,11 @@
 import requests
 import asyncio
-from telegram import Bot
+from telegram import Bot, Update
+from telegram.ext import CommandHandler, ApplicationBuilder, ContextTypes
 import sys
 from flask import Flask
 import threading
 sys.path.insert(0, "libs")
-
 
 # API and Bot Configuration
 API_KEY = "6a3d20782bmsh74bb0e39633d701p1e82f2jsnf2647fda28bd"
@@ -16,7 +16,7 @@ HEADERS = {
     "x-rapidapi-key": API_KEY
 }
 
-
+# Flask keep-alive
 app = Flask("")
 
 @app.route("/")
@@ -59,7 +59,6 @@ TEAM_NAMES_FARSI = {
     "Benfica": "بنفیکا",
 }
 
-# Fetch Events for a Given Fixture
 def fetch_events(fixture_id):
     url = f"https://api-football-v1.p.rapidapi.com/v3/fixtures/events?fixture={fixture_id}"
     response = requests.get(url, headers=HEADERS)
@@ -77,11 +76,8 @@ def format_event_farsi(event):
     event_type = event["type"]
     detail = event["detail"]
 
-
-
     # Translate team name to Farsi
     team_farsi = TEAM_NAMES_FARSI.get(team, team)
-
 
     # Translate card type
     if detail == "Yellow Card":
@@ -99,22 +95,74 @@ def format_event_farsi(event):
         return f"تعویض برای {team_farsi}: {player} وارد بازی شد در دقیقه {time}"
     else:
         return f"رویداد دیگر ({event_type}) برای {team_farsi} در دقیقه {time}"
-    
-    
 
-# Send Message to Telegram Channel (Async)
-async def send_to_telegram(message):
-    bot = Bot(token=BOT_TOKEN)
-    await bot.send_message(chat_id=CHANNEL_ID, text=message)
+# Fetch Previous Game Fixture ID
+def fetch_previous_fixture(team_id=40):  # Default is Liverpool
+    url = f"https://api-football-v1.p.rapidapi.com/v3/fixtures?last=1&team={team_id}"
+    response = requests.get(url, headers=HEADERS)
+    if response.status_code == 200:
+        data = response.json()
+        return data["response"][0]["fixture"]["id"]
+    else:
+        print("Error fetching previous fixture:", response.status_code)
+        return None
 
-# Main Fetch and Send Events
-async def main():
-    fixture_id = 1299071  # Real Madrid vs Any
+# Fetch Ongoing Game Fixture ID
+def fetch_live_fixture(team_id=40):  # Default is Liverpool
+    url = f"https://api-football-v1.p.rapidapi.com/v3/fixtures?live=all&team={team_id}"
+    response = requests.get(url, headers=HEADERS)
+    if response.status_code == 200:
+        data = response.json()
+        if data["response"]:
+            return data["response"][0]["fixture"]["id"]
+        else:
+            return None
+    else:
+        print("Error fetching live fixture:", response.status_code)
+        return None
+
+# Telegram Command: Fetch Previous Game Events
+async def prev(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    fixture_id = fetch_previous_fixture()
+    if not fixture_id:
+        await update.message.reply_text("خطا در یافتن مسابقه قبلی.")
+        return
+
     events = fetch_events(fixture_id)
+    if not events:
+        await update.message.reply_text("هیچ رویدادی برای مسابقه قبلی یافت نشد.")
+        return
+
     for event in events:
         message = format_event_farsi(event)
-        await send_to_telegram(message)
+        await update.message.reply_text(message)
 
-# Run the Bot
+# Telegram Command: Fetch Live Game Events
+async def live(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    fixture_id = fetch_live_fixture()
+    if not fixture_id:
+        await update.message.reply_text("در حال حاضر هیچ مسابقه زنده‌ای یافت نشد.")
+        return
+
+    events = fetch_events(fixture_id)
+    if not events:
+        await update.message.reply_text("هیچ رویدادی برای مسابقه زنده یافت نشد.")
+        return
+
+    for event in events:
+        message = format_event_farsi(event)
+        await update.message.reply_text(message)
+
+# Main Bot Setup
+async def main():
+    application = ApplicationBuilder().token(BOT_TOKEN).build()
+
+    # Add command handlers
+    application.add_handler(CommandHandler("prev", prev))
+    application.add_handler(CommandHandler("live", live))
+
+    # Run the bot
+    await application.run_polling()
+
 if __name__ == "__main__":
     asyncio.run(main())
