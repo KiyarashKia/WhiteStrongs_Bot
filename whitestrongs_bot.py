@@ -96,8 +96,8 @@ async def main():
     events = fetch_events(fixture_id)
     for event in events:
         message = format_event_farsi(event)
-        await send_to_telegram(message)
+        send_to_telegram(message)
 
 # Run the Bot
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
