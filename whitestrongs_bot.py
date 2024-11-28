@@ -2,6 +2,8 @@ import requests
 import asyncio
 from telegram import Bot
 import sys
+from flask import Flask
+import threading
 sys.path.insert(0, "libs")
 
 
@@ -13,6 +15,18 @@ HEADERS = {
     "x-rapidapi-host": "api-football-v1.p.rapidapi.com",
     "x-rapidapi-key": API_KEY
 }
+
+
+app = Flask("")
+
+@app.route("/")
+def home():
+    return "Bot is running!"
+
+def run():
+    app.run(host="0.0.0.0", port=8080)
+
+threading.Thread(target=run).start()
 
 # Farsi Team Names
 TEAM_NAMES_FARSI = {
