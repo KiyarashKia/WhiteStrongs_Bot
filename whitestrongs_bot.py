@@ -1,8 +1,7 @@
 import requests
 import asyncio
-from telegram import Update, InlineQueryResultArticle, InputTextMessageContent
-from telegram.ext import CommandHandler, ApplicationBuilder, ContextTypes, InlineQueryHandler
-import hashlib
+from telegram import Update
+from telegram.ext import CommandHandler, ApplicationBuilder, ContextTypes
 import sys
 from flask import Flask
 import threading
@@ -165,27 +164,6 @@ async def live(update: Update, context: ContextTypes.DEFAULT_TYPE):
         message = format_event_farsi(event)
         await update.message.reply_text(message)
 
-# Inline Query Handler
-async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.inline_query.query
-    if not query:
-        return
-
-    results = [
-        InlineQueryResultArticle(
-            id=hashlib.md5("prev".encode()).hexdigest(),
-            title="Previous Game Events",
-            input_message_content=InputTextMessageContent("/prev")
-        ),
-        InlineQueryResultArticle(
-            id=hashlib.md5("live".encode()).hexdigest(),
-            title="Live Game Events",
-            input_message_content=InputTextMessageContent("/live")
-        )
-    ]
-
-    await context.bot.answer_inline_query(update.inline_query.id, results)
-
 # Main Bot Setup
 async def main():
     application = ApplicationBuilder().token(BOT_TOKEN).build()
@@ -194,7 +172,6 @@ async def main():
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("prev", prev))
     application.add_handler(CommandHandler("live", live))
-    application.add_handler(InlineQueryHandler(inline_query))  # Inline query handler
 
     # Run the bot
     await application.run_polling()
