@@ -1,4 +1,4 @@
-requests
-python-telegram-bot==20.3
-Flask
-nest-asyncio
+python-telegram-bot==20.5
+nest-asyncio==1.5.6
+requests==2.31.0
+Flask==3.0.0
