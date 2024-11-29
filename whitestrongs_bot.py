@@ -98,7 +98,7 @@ def fetch_events(fixture_id):
     if response.status_code == 200:
         return response.json()["response"]
     else:
-        print("Error fetching events:", response.status_code)
+        print("❌ Error fetching events:", response.status_code)
         return []
 
 # Format Events into Farsi Messages
