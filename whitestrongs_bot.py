@@ -1,5 +1,6 @@
 import requests
 import asyncio
+from telegram import Update
 from telegram.ext import CommandHandler, ApplicationBuilder, ContextTypes
 import sys
 from flask import Flask
@@ -174,7 +175,6 @@ async def main():
 
     # Run the bot
     await application.run_polling()
-
 
 if __name__ == "__main__":
     asyncio.get_event_loop().run_until_complete(main())
