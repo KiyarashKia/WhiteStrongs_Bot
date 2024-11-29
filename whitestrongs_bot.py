@@ -112,35 +112,32 @@ def format_event_farsi(event):
     # Translate team name to Farsi
     team_farsi = TEAM_NAMES_FARSI.get(team, team)
 
-    # Emoji translations
-    goal_emoji = "⚽"
-    card_emoji = "🟨" if detail == "Yellow Card" else "🟥" if detail == "Red Card" else "📋"
-    substitution_emoji = "🔄"
-
-    if event_type == "Goal":
-        return f"{goal_emoji} گل برای {team_farsi} در دقیقه {time} توسط {player}"
-    elif event_type == "Card":
-        return f"{card_emoji} کارت {detail} برای {player} از تیم {team_farsi} در دقیقه {time}"
-    elif event_type == "subst":
-        return f"{substitution_emoji} تعویض برای {team_farsi}: {player} در دقیقه {time}"
+    # Translate card type
+    if detail == "Yellow Card":
+        detail_farsi = "کارت زرد ⚠️"
+    elif detail == "Red Card":
+        detail_farsi = "کارت قرمز 🟥"
     else:
-        return f"🎮 رویداد دیگر ({event_type}) برای {team_farsi} در دقیقه {time}"
+        detail_farsi = detail
+        
+    if event_type == "Goal":
+        return f"⚽ گل برای {team_farsi} در دقیقه {time} توسط {player}"
+    elif event_type == "Card":
+        return f"🃏 {detail_farsi} برای {player} از تیم {team_farsi} در دقیقه {time}"
+    elif event_type == "subst":
+        return f"🔄 تعویض برای {team_farsi}: {player} از بازی خارج شد در دقیقه {time}"
+    else:
+        return f"📋 رویداد دیگر ({event_type}) برای {team_farsi} در دقیقه {time}"
 
 # Telegram Command: /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    welcome_message = (
-        "👋 خوش آمدید! ⚽\n"
-        "از دستورات زیر استفاده کنید:\n"
-        "👉 /prev - بازی قبلی\n"
-        "👉 /live - بازی زنده"
-    )
-    await update.message.reply_text(welcome_message)
+    await update.message.reply_text("👋 خوش آمدید!\nدستورات قابل استفاده:\n\n- /prev: 🔙 مسابقه قبلی\n- /live: 🔴 مسابقه زنده")
 
 # Telegram Command: Fetch Previous Game Events
 async def prev(update: Update, context: ContextTypes.DEFAULT_TYPE):
     fixture_id = fetch_previous_fixture()
     if not fixture_id:
-        await update.message.reply_text("❌ خطا در یافتن مسابقه قبلی.")
+        await update.message.reply_text("❌ مسابقه قبلی یافت نشد.")
         return
 
     events = fetch_events(fixture_id)
@@ -177,12 +174,12 @@ async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
     results = [
         InlineQueryResultArticle(
             id=hashlib.md5("prev".encode()).hexdigest(),
-            title="Previous Game Events 🕰️",
+            title="🔙 Previous Game Events",
             input_message_content=InputTextMessageContent("/prev")
         ),
         InlineQueryResultArticle(
             id=hashlib.md5("live".encode()).hexdigest(),
-            title="Live Game Events 🔴",
+            title="🔴 Live Game Events",
             input_message_content=InputTextMessageContent("/live")
         )
     ]
