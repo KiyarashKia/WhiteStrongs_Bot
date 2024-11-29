@@ -5,8 +5,7 @@ from telegram.ext import CommandHandler, ApplicationBuilder, ContextTypes
 import sys
 from flask import Flask
 import threading
-import nest_asyncio
-from telegram.constants import ChatType
+import nest_asyncio  # Fix for nested event loop issue
 
 # Apply nest_asyncio
 nest_asyncio.apply()
