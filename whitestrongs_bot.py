@@ -184,6 +184,7 @@ async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     ]
 
+
     await context.bot.answer_inline_query(update.inline_query.id, results)
 
 # Main Bot Setup
