@@ -1,7 +1,7 @@
 import requests
 import asyncio
-from telegram import Update, InlineQueryResultArticle, InputTextMessageContent
-from telegram.ext import CommandHandler, ApplicationBuilder, ContextTypes, InlineQueryHandler
+from telegram import Update
+from telegram.ext import CommandHandler, ApplicationBuilder, ContextTypes
 import sys
 from flask import Flask
 import threading
@@ -26,15 +26,12 @@ HEADERS = {
 # Flask keep-alive
 app = Flask("")
 
-
 @app.route("/")
 def home():
     return "Bot is running!"
 
-
 def run():
     app.run(host="0.0.0.0", port=8080)
-
 
 threading.Thread(target=run).start()
 
@@ -79,7 +76,6 @@ def fetch_events(fixture_id):
         print("Error fetching events:", response.status_code)
         return []
 
-
 # Format Events into Farsi Messages
 def format_event_farsi(event):
     time = event["time"]["elapsed"]
@@ -98,7 +94,7 @@ def format_event_farsi(event):
         detail_farsi = "کارت قرمز"
     else:
         detail_farsi = detail
-
+        
     if event_type == "Goal":
         return f"گل برای {team_farsi} در دقیقه {time} توسط {player}"
     elif event_type == "Card":
@@ -107,7 +103,6 @@ def format_event_farsi(event):
         return f"تعویض برای {team_farsi}: {player} وارد بازی شد در دقیقه {time}"
     else:
         return f"رویداد دیگر ({event_type}) برای {team_farsi} در دقیقه {time}"
-
 
 # Fetch Previous Game Fixture ID
 def fetch_previous_fixture(team_id=40):  # Default is Liverpool
@@ -119,7 +114,6 @@ def fetch_previous_fixture(team_id=40):  # Default is Liverpool
     else:
         print("Error fetching previous fixture:", response.status_code)
         return None
-
 
 # Fetch Ongoing Game Fixture ID
 def fetch_live_fixture(team_id=40):  # Default is Liverpool
@@ -135,15 +129,13 @@ def fetch_live_fixture(team_id=40):  # Default is Liverpool
         print("Error fetching live fixture:", response.status_code)
         return None
 
-
 # Telegram Command: /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("خوش آمدید! شما می‌توانید از دستورات /prev و /live استفاده کنید.")
 
-
 # Telegram Command: Fetch Previous Game Events
 async def prev(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print(update)  # Debugging incoming update
+    # Check if the bot was tagged in a channel
     if update.message.chat.type == ChatType.CHANNEL and f"@{context.bot.username}" not in update.message.text:
         return  # Ignore commands not tagging the bot in channels
 
@@ -161,10 +153,8 @@ async def prev(update: Update, context: ContextTypes.DEFAULT_TYPE):
         message = format_event_farsi(event)
         await context.bot.send_message(chat_id=update.effective_chat.id, text=message)
 
-
 # Telegram Command: Fetch Live Game Events
 async def live(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print(update)  # Debugging incoming update
     if update.message.chat.type == ChatType.CHANNEL and f"@{context.bot.username}" not in update.message.text:
         return
 
@@ -182,35 +172,6 @@ async def live(update: Update, context: ContextTypes.DEFAULT_TYPE):
         message = format_event_farsi(event)
         await context.bot.send_message(chat_id=update.effective_chat.id, text=message)
 
-
-# Inline Query Handler
-async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.inline_query.query
-    print(f"Inline query received: {query}")  # Debugging
-
-    results = [
-        InlineQueryResultArticle(
-            id="1",
-            title="Previous Game Events (/prev)",
-            input_message_content=InputTextMessageContent(
-                "/prev"
-            ),
-            description="View the events from the previous game."
-        ),
-        InlineQueryResultArticle(
-            id="2",
-            title="Live Game Events (/live)",
-            input_message_content=InputTextMessageContent(
-                "/live"
-            ),
-            description="View live events for an ongoing game."
-        ),
-    ]
-
-
-    await update.inline_query.answer(results, cache_time=10)
-
-
 # Main Bot Setup
 async def main():
     application = ApplicationBuilder().token(BOT_TOKEN).build()
@@ -220,12 +181,8 @@ async def main():
     application.add_handler(CommandHandler("prev", prev))
     application.add_handler(CommandHandler("live", live))
 
-    # Add inline query handler
-    application.add_handler(InlineQueryHandler(inline_query))
-
     # Run the bot
     await application.run_polling()
-
 
 if __name__ == "__main__":
     asyncio.get_event_loop().run_until_complete(main())
