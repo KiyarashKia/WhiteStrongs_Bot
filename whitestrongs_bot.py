@@ -8,6 +8,7 @@ from flask import Flask
 import threading
 import nest_asyncio  # Fix for nested event loop issue
 
+
 # Apply nest_asyncio
 nest_asyncio.apply()
 
