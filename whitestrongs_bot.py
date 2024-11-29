@@ -207,6 +207,7 @@ async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ),
     ]
 
+
     await update.inline_query.answer(results, cache_time=10)
 
 
