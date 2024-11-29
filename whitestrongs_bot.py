@@ -65,6 +65,7 @@ TEAM_NAMES_FARSI = {
     "Benfica": "بنفیکا",
 }
 
+
 # Fetch Events for a Given Fixture
 def fetch_events(fixture_id):
     url = f"https://api-football-v1.p.rapidapi.com/v3/fixtures/events?fixture={fixture_id}"
