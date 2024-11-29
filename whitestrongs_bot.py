@@ -1,6 +1,6 @@
 import requests
 import asyncio
-from telegram import Bot, Update
+from telegram import Update
 from telegram.ext import CommandHandler, ApplicationBuilder, ContextTypes
 import sys
 from flask import Flask
@@ -49,7 +49,7 @@ TEAM_NAMES_FARSI = {
     "Getafe": "ختافه",
     "Espanyol": "اسپانیول",
     "Osasuna": "اوساسونا",
-    "Girona": "گیرونا",
+    "Girona": "خیرونا",
     "Rayo Vallecano": "رایو وایکانو",
     "Mallorca": "مایورکا",
     "Alavés": "آلاوز",
@@ -109,7 +109,7 @@ def fetch_previous_fixture(team_id=40):  # Default is Liverpool
     response = requests.get(url, headers=HEADERS)
     if response.status_code == 200:
         data = response.json()
-        return data["response"][0]["fixture"]["id"]
+        return data["response"][0]["fixture"]["id"] if data["response"] else None
     else:
         print("Error fetching previous fixture:", response.status_code)
         return None
@@ -127,6 +127,10 @@ def fetch_live_fixture(team_id=40):  # Default is Liverpool
     else:
         print("Error fetching live fixture:", response.status_code)
         return None
+
+# Telegram Command: /start
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("خوش آمدید! شما می‌توانید از دستورات /prev و /live استفاده کنید.")
 
 # Telegram Command: Fetch Previous Game Events
 async def prev(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -165,6 +169,7 @@ async def main():
     application = ApplicationBuilder().token(BOT_TOKEN).build()
 
     # Add command handlers
+    application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("prev", prev))
     application.add_handler(CommandHandler("live", live))
 
