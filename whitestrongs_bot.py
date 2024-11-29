@@ -7,10 +7,10 @@ from flask import Flask
 import threading
 import nest_asyncio  # Fix for nested event loop issue
 
-# Apply nest_asyncio
+# Apply nest_asyncio to allow nested event loops
 nest_asyncio.apply()
 
-# Add `libs` to system path
+# Add `libs` directory to the system path
 sys.path.insert(0, "libs")
 
 # API and Bot Configuration
@@ -32,6 +32,7 @@ def home():
 def run():
     app.run(host="0.0.0.0", port=8080)
 
+# Run Flask server in a separate thread to keep Replit alive
 threading.Thread(target=run).start()
 
 # Farsi Team Names
@@ -65,100 +66,91 @@ TEAM_NAMES_FARSI = {
     "Benfica": "بنفیکا",
 }
 
-
-# Fetch Events for a Given Fixture
+# Helper Function to Fetch Fixture Events
 def fetch_events(fixture_id):
-    url = f"https://api-football-v1.p.rapidapi.com/v3/fixtures/events?fixture={fixture_id}"
-    response = requests.get(url, headers=HEADERS)
-    if response.status_code == 200:
+    try:
+        url = f"https://api-football-v1.p.rapidapi.com/v3/fixtures/events?fixture={fixture_id}"
+        response = requests.get(url, headers=HEADERS)
+        response.raise_for_status()
         return response.json()["response"]
-    else:
-        print("Error fetching events:", response.status_code)
+    except requests.RequestException as e:
+        print(f"Error fetching events: {e}")
         return []
 
-# Format Events into Farsi Messages
+# Helper Function to Format Events in Farsi
 def format_event_farsi(event):
-    time = event["time"]["elapsed"]
-    team = event["team"]["name"]
-    player = event["player"]["name"]
-    event_type = event["type"]
-    detail = event["detail"]
+    time = event.get("time", {}).get("elapsed", "نامشخص")
+    team = event.get("team", {}).get("name", "تیم نامشخص")
+    player = event.get("player", {}).get("name", "بازیکن نامشخص")
+    event_type = event.get("type", "نامشخص")
+    detail = event.get("detail", "نامشخص")
 
-    # Translate team name to Farsi
     team_farsi = TEAM_NAMES_FARSI.get(team, team)
 
-    # Translate card type
-    if detail == "Yellow Card":
-        detail_farsi = "کارت زرد"
-    elif detail == "Red Card":
-        detail_farsi = "کارت قرمز"
-    else:
-        detail_farsi = detail
-        
     if event_type == "Goal":
-        return f"گل برای {team_farsi} در دقیقه {time} توسط {player}"
+        return f"⚽ گل برای {team_farsi} در دقیقه {time} توسط {player}"
     elif event_type == "Card":
-        return f"کارت {detail_farsi} برای {player} از تیم {team_farsi} در دقیقه {time}"
+        detail_farsi = "کارت زرد" if detail == "Yellow Card" else "کارت قرمز" if detail == "Red Card" else detail
+        return f"🚩 {detail_farsi} برای {player} از تیم {team_farsi} در دقیقه {time}"
     elif event_type == "subst":
-        return f"تعویض برای {team_farsi}: {player} از بازی خارج شد در دقیقه {time}"
+        return f"🔄 تعویض برای {team_farsi}: {player} وارد بازی شد در دقیقه {time}"
     else:
-        return f"رویداد دیگر ({event_type}) برای {team_farsi} در دقیقه {time}"
+        return f"📋 رویداد: {event_type} برای {team_farsi} در دقیقه {time}"
 
 # Fetch Previous Game Fixture ID
 def fetch_previous_fixture(team_id=40):  # Default is Liverpool
-    url = f"https://api-football-v1.p.rapidapi.com/v3/fixtures?last=1&team={team_id}"
-    response = requests.get(url, headers=HEADERS)
-    if response.status_code == 200:
-        data = response.json()
-        return data["response"][0]["fixture"]["id"] if data["response"] else None
-    else:
-        print("Error fetching previous fixture:", response.status_code)
+    try:
+        url = f"https://api-football-v1.p.rapidapi.com/v3/fixtures?last=1&team={team_id}"
+        response = requests.get(url, headers=HEADERS)
+        response.raise_for_status()
+        data = response.json().get("response", [])
+        return data[0]["fixture"]["id"] if data else None
+    except requests.RequestException as e:
+        print(f"Error fetching previous fixture: {e}")
         return None
 
 # Fetch Ongoing Game Fixture ID
 def fetch_live_fixture(team_id=40):  # Default is Liverpool
-    url = f"https://api-football-v1.p.rapidapi.com/v3/fixtures?live=all&team={team_id}"
-    response = requests.get(url, headers=HEADERS)
-    if response.status_code == 200:
-        data = response.json()
-        if data["response"]:
-            return data["response"][0]["fixture"]["id"]
-        else:
-            return None
-    else:
-        print("Error fetching live fixture:", response.status_code)
+    try:
+        url = f"https://api-football-v1.p.rapidapi.com/v3/fixtures?live=all&team={team_id}"
+        response = requests.get(url, headers=HEADERS)
+        response.raise_for_status()
+        data = response.json().get("response", [])
+        return data[0]["fixture"]["id"] if data else None
+    except requests.RequestException as e:
+        print(f"Error fetching live fixture: {e}")
         return None
 
 # Telegram Command: /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("خوش آمدید! شما می‌توانید از دستورات /prev و /live استفاده کنید.")
 
-# Telegram Command: Fetch Previous Game Events
+# Telegram Command: /prev
 async def prev(update: Update, context: ContextTypes.DEFAULT_TYPE):
     fixture_id = fetch_previous_fixture()
     if not fixture_id:
-        await update.message.reply_text("خطا در یافتن مسابقه قبلی.")
+        await update.message.reply_text("❌ خطا در یافتن مسابقه قبلی.")
         return
 
     events = fetch_events(fixture_id)
     if not events:
-        await update.message.reply_text("هیچ رویدادی برای مسابقه قبلی یافت نشد.")
+        await update.message.reply_text("❌ هیچ رویدادی برای مسابقه قبلی یافت نشد.")
         return
 
     for event in events:
         message = format_event_farsi(event)
         await update.message.reply_text(message)
 
-# Telegram Command: Fetch Live Game Events
+# Telegram Command: /live
 async def live(update: Update, context: ContextTypes.DEFAULT_TYPE):
     fixture_id = fetch_live_fixture()
     if not fixture_id:
-        await update.message.reply_text("در حال حاضر هیچ مسابقه زنده‌ای یافت نشد.")
+        await update.message.reply_text("❌ در حال حاضر هیچ مسابقه زنده‌ای یافت نشد.")
         return
 
     events = fetch_events(fixture_id)
     if not events:
-        await update.message.reply_text("هیچ رویدادی برای مسابقه زنده یافت نشد.")
+        await update.message.reply_text("❌ هیچ رویدادی برای مسابقه زنده یافت نشد.")
         return
 
     for event in events:
