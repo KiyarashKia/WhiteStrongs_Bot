@@ -36,34 +36,59 @@ threading.Thread(target=run).start()
 
 # Farsi Team Names
 TEAM_NAMES_FARSI = {
-    "Real Madrid": "رئال مادرید",
-    "Barcelona": "بارسلونا",
-    "Atlético Madrid": "اتلتیکو مادرید",
-    "Sevilla": "سویا",
-    "Villarreal": "ویارئال",
-    "Real Sociedad": "رئال سوسیداد",
-    "Athletic Club": "اتلتیک بیلبائو",
-    "Betis": "رئال بتیس",
-    "Celta Vigo": "سلتاویگو",
-    "Valencia": "والنسیا",
-    "Getafe": "ختافه",
-    "Espanyol": "اسپانیول",
-    "Osasuna": "اوساسونا",
-    "Girona": "خیرونا",
-    "Rayo Vallecano": "رایو وایکانو",
-    "Mallorca": "مایورکا",
-    "Alavés": "آلاوز",
-    "Las Palmas": "لاس پالماس",
+    "Arsenal": "آرسنال",
+    "Aston Villa": "استون ویلا",
     "Liverpool": "لیورپول",
     "Manchester City": "منچستر سیتی",
-    "Bayern München": "بایرن مونیخ",
-    "PSG": "پاری سن ژرمن",
+    "Atlético Madrid": "اتلتیکو مادرید",
+    "Barcelona": "بارسلونا",
+    "Girona": "خیرونا",
+    "Real Madrid": "رئال مادرید",
+    "Atalanta": "آتالانتا",
+    "Bologna": "بولونیا",
+    "Inter Milan": "اینتر میلان",
     "Juventus": "یوونتوس",
-    "Inter": "اینترمیلان",
-    "AC Milan": "آث میلان",
-    "Borussia Dortmund": "دورتموند",
+    "Milan": "آث میلان",
+    "Bayern Munich": "بایرن مونیخ",
+    "Borussia Dortmund": "بوروسیا دورتموند",
+    "RB Leipzig": "لایپزیگ",
+    "Stuttgart": "اشتوتگارت",
+    "Brest": "برست",
+    "Lille": "لیل",
+    "Monaco": "موناکو",
+    "Paris Saint-Germain": "پاری سن ژرمن",
     "Benfica": "بنفیکا",
+    "Sporting CP": "اسپورتینگ لیسبون",
+    "Feyenoord": "فاینورد",
+    "PSV Eindhoven": "پی‌اس‌وی آیندهوون",
+    "Celtic": "سلتیک",
+    "Club Brugge": "کلاب بروژ",
+    "Dinamo Zagreb": "دینامو زاگرب",
+    "Red Bull Salzburg": "ردبول زالتسبورگ",
+    "Sturm Graz": "اشتورم گراتس",
+    "Red Star Belgrade": "ستاره سرخ بلگراد",
+    "Shakhtar Donetsk": "شاختار دونتسک",
+    "Sparta Prague": "اسپارتا پراگ",
+    "Slovan Bratislava": "اسلووان براتیسلاوا",
+    "Young Boys": "یانگ بویز",
+    "Athletic Club": "اتلتیک بیلبائو",
+    "CA Osasuna": "اوساسونا",
+    "CD Leganés": "لگانس",
+    "Deportivo Alavés": "آلاوز",
+    "Getafe CF": "ختافه",
+    "Rayo Vallecano": "رایو وایکانو",
+    "RC Celta": "سلتاویگو",
+    "RCD Espanyol de Barcelona": "اسپانیول بارسلونا",
+    "RCD Mallorca": "مایورکا",
+    "Real Betis": "رئال بتیس",
+    "Real Sociedad": "رئال سوسیداد",
+    "Real Valladolid CF": "رئال وایادولید",
+    "Sevilla FC": "سویا",
+    "UD Las Palmas": "لاس پالماس",
+    "Valencia CF": "والنسیا",
+    "Villarreal CF": "ویارئال",
 }
+
 
 # Fetch Events for a Given Fixture
 def fetch_events(fixture_id):
@@ -103,29 +128,28 @@ def format_event_farsi(event):
     else:
         return f"📋 رویداد دیگر ({event_type}) برای {team_farsi} در دقیقه {time}"
 
-# Fetch Previous Game Fixture ID
-def fetch_previous_fixture(team_id=40):  # Default is Liverpool
-    url = f"https://api-football-v1.p.rapidapi.com/v3/fixtures?last=1&team={team_id}"
-    response = requests.get(url, headers=HEADERS)
-    if response.status_code == 200:
-        data = response.json()
-        return data["response"][0]["fixture"]["id"] if data["response"] else None
-    else:
-        print("⚠️ Error fetching previous fixture:", response.status_code)
+# Fetch Real Madrid's Previous Game Fixture ID
+def fetch_previous_fixture(team_id=1):  # Real Madrid's Team ID
+    try:
+        url = f"https://api-football-v1.p.rapidapi.com/v3/fixtures?last=1&team={team_id}"
+        response = requests.get(url, headers=HEADERS)
+        response.raise_for_status()
+        data = response.json().get("response", [])
+        return data[0]["fixture"]["id"] if data else None
+    except requests.RequestException as e:
+        print(f"⚠️ Error fetching previous fixture: {e}")
         return None
 
 # Fetch Ongoing Game Fixture ID
-def fetch_live_fixture(team_id=40):  # Default is Liverpool
-    url = f"https://api-football-v1.p.rapidapi.com/v3/fixtures?live=all&team={team_id}"
-    response = requests.get(url, headers=HEADERS)
-    if response.status_code == 200:
-        data = response.json()
-        if data["response"]:
-            return data["response"][0]["fixture"]["id"]
-        else:
-            return None
-    else:
-        print("⚠️ Error fetching live fixture:", response.status_code)
+def fetch_live_fixture():
+    try:
+        url = "https://api-football-v1.p.rapidapi.com/v3/fixtures?live=all"
+        response = requests.get(url, headers=HEADERS)
+        response.raise_for_status()
+        data = response.json().get("response", [])
+        return data[0]["fixture"]["id"] if data else None
+    except requests.RequestException as e:
+        print(f"⚠️ Error fetching live fixture: {e}")
         return None
 
 # Telegram Command: /start
@@ -133,15 +157,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "👋 خوش آمدید!\n\n"
         "دستورات موجود:\n"
-        "⚽ /prev - دریافت اطلاعات مسابقه قبلی\n"
+        "⚽ /prev - دریافت اطلاعات مسابقه قبلی رئال مادرید\n"
         "🎥 /live - دریافت اطلاعات مسابقه زنده (در صورت وجود)"
     )
 
-# Telegram Command: Fetch Previous Game Events
+# Telegram Command: /prev
 async def prev(update: Update, context: ContextTypes.DEFAULT_TYPE):
     fixture_id = fetch_previous_fixture()
     if not fixture_id:
-        await update.message.reply_text("❌ خطا در یافتن مسابقه قبلی.")
+        await update.message.reply_text("❌ خطا در یافتن مسابقه قبلی رئال مادرید.")
         return
 
     events = fetch_events(fixture_id)
@@ -153,7 +177,7 @@ async def prev(update: Update, context: ContextTypes.DEFAULT_TYPE):
         message = format_event_farsi(event)
         await update.message.reply_text(message)
 
-# Telegram Command: Fetch Live Game Events
+# Telegram Command: /live
 async def live(update: Update, context: ContextTypes.DEFAULT_TYPE):
     fixture_id = fetch_live_fixture()
     if not fixture_id:
