@@ -123,7 +123,12 @@ def fetch_live_fixture(team_id=40):  # Default is Liverpool
 
 # Telegram Command: /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("خوش آمدید! شما می‌توانید از دستورات /prev و /live استفاده کنید.")
+    await update.message.reply_text(
+        "🎉 خوش آمدید!\n"
+        "شما می‌توانید از دستورات زیر استفاده کنید:\n"
+        "/prev - برای مشاهده مسابقه قبلی\n"
+        "/live - برای مشاهده مسابقه زنده (اگر در حال اجرا باشد)"
+    )
 
 # Telegram Command: /prev
 async def prev(update: Update, context: ContextTypes.DEFAULT_TYPE):
