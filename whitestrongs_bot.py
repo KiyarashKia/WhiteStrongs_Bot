@@ -8,7 +8,6 @@ from flask import Flask
 import threading
 import nest_asyncio  # Fix for nested event loop issue
 
-
 # Apply nest_asyncio
 nest_asyncio.apply()
 
@@ -184,7 +183,6 @@ async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
             input_message_content=InputTextMessageContent("/live")
         )
     ]
-
 
     await context.bot.answer_inline_query(update.inline_query.id, results)
 
