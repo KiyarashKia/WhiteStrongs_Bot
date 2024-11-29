@@ -1,6 +1,5 @@
 import requests
 import asyncio
-from telegram import Update
 from telegram.ext import CommandHandler, ApplicationBuilder, ContextTypes
 import sys
 from flask import Flask
@@ -134,42 +133,35 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Telegram Command: Fetch Previous Game Events
 async def prev(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Check if the bot was tagged in a channel
-    if update.message.chat.type == ChatType.CHANNEL and f"@{context.bot.username}" not in update.message.text:
-        return  # Ignore commands not tagging the bot in channels
-
     fixture_id = fetch_previous_fixture()
     if not fixture_id:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="خطا در یافتن مسابقه قبلی.")
+        await update.message.reply_text("خطا در یافتن مسابقه قبلی.")
         return
 
     events = fetch_events(fixture_id)
     if not events:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="هیچ رویدادی برای مسابقه قبلی یافت نشد.")
+        await update.message.reply_text("هیچ رویدادی برای مسابقه قبلی یافت نشد.")
         return
 
     for event in events:
         message = format_event_farsi(event)
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=message)
+        await update.message.reply_text(message)
 
 # Telegram Command: Fetch Live Game Events
 async def live(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message.chat.type == ChatType.CHANNEL and f"@{context.bot.username}" not in update.message.text:
-        return
-
     fixture_id = fetch_live_fixture()
     if not fixture_id:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="در حال حاضر هیچ مسابقه زنده‌ای یافت نشد.")
+        await update.message.reply_text("در حال حاضر هیچ مسابقه زنده‌ای یافت نشد.")
         return
 
     events = fetch_events(fixture_id)
     if not events:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="هیچ رویدادی برای مسابقه زنده یافت نشد.")
+        await update.message.reply_text("هیچ رویدادی برای مسابقه زنده یافت نشد.")
         return
 
     for event in events:
         message = format_event_farsi(event)
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=message)
+        await update.message.reply_text(message)
 
 # Main Bot Setup
 async def main():
