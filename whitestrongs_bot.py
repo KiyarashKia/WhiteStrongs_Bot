@@ -1,7 +1,8 @@
 import requests
 import asyncio
-from telegram import Update
-from telegram.ext import CommandHandler, ApplicationBuilder, ContextTypes
+from telegram import Update, InlineQueryResultArticle, InputTextMessageContent
+from telegram.ext import CommandHandler, ApplicationBuilder, ContextTypes, InlineQueryHandler
+import hashlib
 import sys
 from flask import Flask
 import threading
@@ -27,7 +28,7 @@ app = Flask("")
 
 @app.route("/")
 def home():
-    return "⚡ Bot is running! ⚡"
+    return "Bot is running!"
 
 def run():
     app.run(host="0.0.0.0", port=8080)
@@ -97,7 +98,7 @@ def fetch_events(fixture_id):
     if response.status_code == 200:
         return response.json()["response"]
     else:
-        print("⚠️ Error fetching events:", response.status_code)
+        print("Error fetching events:", response.status_code)
         return []
 
 # Format Events into Farsi Messages
@@ -113,85 +114,102 @@ def format_event_farsi(event):
 
     # Translate card type
     if detail == "Yellow Card":
-        detail_farsi = "کارت زرد 🟨"
+        detail_farsi = "کارت زرد"
     elif detail == "Red Card":
-        detail_farsi = "کارت قرمز 🟥"
+        detail_farsi = "کارت قرمز"
     else:
         detail_farsi = detail
-
+        
     if event_type == "Goal":
-        return f"⚽ گل برای {team_farsi} در دقیقه {time} توسط {player}"
+        return f"گل برای {team_farsi} در دقیقه {time} توسط {player}"
     elif event_type == "Card":
-        return f"🚨 {detail_farsi} برای {player} از تیم {team_farsi} در دقیقه {time}"
+        return f"کارت {detail_farsi} برای {player} از تیم {team_farsi} در دقیقه {time}"
     elif event_type == "subst":
-        return f"🔄 تعویض برای {team_farsi}: {player} از بازی خارج شد در دقیقه {time}"
+        return f"تعویض برای {team_farsi}: {player} از بازی خارج شد در دقیقه {time}"
     else:
-        return f"📋 رویداد دیگر ({event_type}) برای {team_farsi} در دقیقه {time}"
+        return f"رویداد دیگر ({event_type}) برای {team_farsi} در دقیقه {time}"
 
-# Fetch Real Madrid's Previous Game Fixture ID
-def fetch_previous_fixture(team_id=1):  # Real Madrid's Team ID
-    try:
-        url = f"https://api-football-v1.p.rapidapi.com/v3/fixtures?last=1&team={team_id}"
-        response = requests.get(url, headers=HEADERS)
-        response.raise_for_status()
-        data = response.json().get("response", [])
-        return data[0]["fixture"]["id"] if data else None
-    except requests.RequestException as e:
-        print(f"⚠️ Error fetching previous fixture: {e}")
+# Fetch Previous Game Fixture ID
+def fetch_previous_fixture(team_id=40):  # Default is Liverpool
+    url = f"https://api-football-v1.p.rapidapi.com/v3/fixtures?last=1&team={team_id}"
+    response = requests.get(url, headers=HEADERS)
+    if response.status_code == 200:
+        data = response.json()
+        return data["response"][0]["fixture"]["id"] if data["response"] else None
+    else:
+        print("Error fetching previous fixture:", response.status_code)
         return None
 
 # Fetch Ongoing Game Fixture ID
-def fetch_live_fixture():
-    try:
-        url = "https://api-football-v1.p.rapidapi.com/v3/fixtures?live=all"
-        response = requests.get(url, headers=HEADERS)
-        response.raise_for_status()
-        data = response.json().get("response", [])
-        return data[0]["fixture"]["id"] if data else None
-    except requests.RequestException as e:
-        print(f"⚠️ Error fetching live fixture: {e}")
+def fetch_live_fixture(team_id=40):  # Default is Liverpool
+    url = f"https://api-football-v1.p.rapidapi.com/v3/fixtures?live=all&team={team_id}"
+    response = requests.get(url, headers=HEADERS)
+    if response.status_code == 200:
+        data = response.json()
+        if data["response"]:
+            return data["response"][0]["fixture"]["id"]
+        else:
+            return None
+    else:
+        print("Error fetching live fixture:", response.status_code)
         return None
 
 # Telegram Command: /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "👋 خوش آمدید!\n\n"
-        "دستورات موجود:\n"
-        "⚽ /prev - دریافت اطلاعات مسابقه قبلی رئال مادرید\n"
-        "🎥 /live - دریافت اطلاعات مسابقه زنده (در صورت وجود)"
-    )
+    await update.message.reply_text("خوش آمدید! شما می‌توانید از دستورات /prev و /live استفاده کنید.")
 
-# Telegram Command: /prev
+# Telegram Command: Fetch Previous Game Events
 async def prev(update: Update, context: ContextTypes.DEFAULT_TYPE):
     fixture_id = fetch_previous_fixture()
     if not fixture_id:
-        await update.message.reply_text("❌ خطا در یافتن مسابقه قبلی رئال مادرید.")
+        await update.message.reply_text("خطا در یافتن مسابقه قبلی.")
         return
 
     events = fetch_events(fixture_id)
     if not events:
-        await update.message.reply_text("❌ هیچ رویدادی برای مسابقه قبلی یافت نشد.")
+        await update.message.reply_text("هیچ رویدادی برای مسابقه قبلی یافت نشد.")
         return
 
     for event in events:
         message = format_event_farsi(event)
         await update.message.reply_text(message)
 
-# Telegram Command: /live
+# Telegram Command: Fetch Live Game Events
 async def live(update: Update, context: ContextTypes.DEFAULT_TYPE):
     fixture_id = fetch_live_fixture()
     if not fixture_id:
-        await update.message.reply_text("❌ در حال حاضر هیچ مسابقه زنده‌ای یافت نشد.")
+        await update.message.reply_text("در حال حاضر هیچ مسابقه زنده‌ای یافت نشد.")
         return
 
     events = fetch_events(fixture_id)
     if not events:
-        await update.message.reply_text("❌ هیچ رویدادی برای مسابقه زنده یافت نشد.")
+        await update.message.reply_text("هیچ رویدادی برای مسابقه زنده یافت نشد.")
         return
 
     for event in events:
         message = format_event_farsi(event)
         await update.message.reply_text(message)
+
+# Inline Query Handler
+async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.inline_query.query
+    if not query:
+        return
+
+    results = [
+        InlineQueryResultArticle(
+            id=hashlib.md5("prev".encode()).hexdigest(),
+            title="Previous Game Events",
+            input_message_content=InputTextMessageContent("/prev")
+        ),
+        InlineQueryResultArticle(
+            id=hashlib.md5("live".encode()).hexdigest(),
+            title="Live Game Events",
+            input_message_content=InputTextMessageContent("/live")
+        )
+    ]
+
+    await context.bot.answer_inline_query(update.inline_query.id, results)
 
 # Main Bot Setup
 async def main():
@@ -201,6 +219,7 @@ async def main():
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("prev", prev))
     application.add_handler(CommandHandler("live", live))
+    application.add_handler(InlineQueryHandler(inline_query))  # Inline query handler
 
     # Run the bot
     await application.run_polling()
