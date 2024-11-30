@@ -32,7 +32,7 @@ bot_running = True
 @app.route("/")
 def home():
     if bot_running:
-        return "⚡ Bot is running!"
+        return "⚡ Bot is running!", 200
     else:
         return "❌ Bot is not running!", 503
 
