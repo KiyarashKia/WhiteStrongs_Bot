@@ -1,7 +1,7 @@
 import requests
 import asyncio
 from telegram import Update
-from telegram.ext import CommandHandler, ApplicationBuilder, ContextTypes, InlineQueryHandler
+from telegram.ext import CommandHandler, ApplicationBuilder, ContextTypes
 import sys
 from flask import Flask
 import threading
