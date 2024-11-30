@@ -1,12 +1,11 @@
 import requests
 import asyncio
-from telegram import Update, InlineQueryResultArticle, InputTextMessageContent
+from telegram import Update
 from telegram.ext import CommandHandler, ApplicationBuilder, ContextTypes, InlineQueryHandler
-import hashlib
 import sys
 from flask import Flask
 import threading
-import nest_asyncio  # Fix for nested event loop issue
+import nest_asyncio
 
 # Apply nest_asyncio
 nest_asyncio.apply()
@@ -26,10 +25,16 @@ HEADERS = {
 # Flask keep-alive
 app = Flask("")
 
+# Bot running status
+bot_running = True
+
 
 @app.route("/")
 def home():
-    return "⚡ Bot is running!"
+    if bot_running:
+        return "⚡ Bot is running!"
+    else:
+        return "❌ Bot is not running!", 503
 
 
 def run():
@@ -163,6 +168,9 @@ async def live(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Main Bot Setup
 async def main():
+    global bot_running
+    bot_running = True
+
     application = ApplicationBuilder().token(BOT_TOKEN).build()
 
     # Add command handlers
@@ -171,7 +179,12 @@ async def main():
     application.add_handler(CommandHandler("live", live))
 
     # Run the bot
-    await application.run_polling()
+    try:
+        await application.run_polling()
+    except Exception as e:
+        print(f"Error occurred: {e}")
+    finally:
+        bot_running = False  # Set the bot as not running when exiting
 
 
 if __name__ == "__main__":
