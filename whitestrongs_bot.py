@@ -7,6 +7,8 @@ from flask import Flask
 import threading
 import nest_asyncio
 
+REAL_MADRID_ID = 541
+
 # Apply nest_asyncio
 nest_asyncio.apply()
 
@@ -28,8 +30,15 @@ app = Flask("")
 
 @app.route("/")
 def home():
-    return "Bot is running!"
-
+    global is_live_update_running
+    try:
+        if is_live_update_running:
+            return "✅ Bot is running and sending live updates!", 200
+        else:
+            return "❌ Bot is not running or live updates are stopped.", 503
+    except Exception as e:
+        print(f"Error occurred in / endpoint: {e}")
+        return "❌ Unexpected error occurred.", 500
 
 def run():
     app.run(host="0.0.0.0", port=8080)
@@ -89,13 +98,21 @@ def fetch_events(fixture_id):
 # Format Events into Farsi Messages
 def format_event_farsi(event):
     time = event["time"]["elapsed"]
-    team = event["team"]["name"]
+    team_id = event["team"]["id"]
+    team_name = event["team"]["name"]
     player = event["player"]["name"]
     event_type = event["type"]
     detail = event["detail"]
 
     # Translate team name to Farsi
-    team_farsi = TEAM_NAMES_FARSI.get(team, team)
+    team_farsi = TEAM_NAMES_FARSI.get(team_name, team_name)
+
+    # Customize messages for goals
+    if event_type == "Goal":
+        if team_id == REAL_MADRID_ID:  # If Real Madrid scores
+            return f"گللللللللللللل برای رئال مادرید! 🎉 توسط {player} در دقیقه {time}!"
+        else:  # If opponent scores
+            return f"گل برای {team_farsi} در دقیقه {time} توسط {player}"
 
     # Translate card type
     if detail == "Yellow Card":
@@ -105,15 +122,15 @@ def format_event_farsi(event):
     else:
         detail_farsi = detail
 
-    if event_type == "Goal":
-        return f"گل برای {team_farsi} در دقیقه {time} توسط {player}"
-    elif event_type == "Card":
+    # Handle cards
+    if event_type == "Card":
         return f"کارت {detail_farsi} برای {player} از تیم {team_farsi} در دقیقه {time}"
+    # Handle substitutions
     elif event_type == "subst":
         return f"تعویض برای {team_farsi}: {player} وارد بازی شد در دقیقه {time}"
+    # Handle other events
     else:
         return f"رویداد دیگر ({event_type}) برای {team_farsi} در دقیقه {time}"
-
 
 # Fetch Ongoing Game Fixture ID
 def fetch_live_fixture(team_id=40):  #Real Madrid
