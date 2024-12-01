@@ -5,7 +5,7 @@ from telegram.ext import CommandHandler, ApplicationBuilder, ContextTypes
 import sys
 from flask import Flask
 import threading
-import nest_asyncio  # Fix for nested event loop issue
+import nest_asyncio
 
 # Apply nest_asyncio
 nest_asyncio.apply()
@@ -42,7 +42,30 @@ TEAM_NAMES_FARSI = {
     "Real Madrid": "رئال مادرید",
     "Barcelona": "بارسلونا",
     "Atlético Madrid": "اتلتیکو مادرید",
-    # Add other teams as necessary
+    "Sevilla": "سویا",
+    "Villarreal": "ویارئال",
+    "Real Sociedad": "رئال سوسیداد",
+    "Athletic Club": "اتلتیک بیلبائو",
+    "Betis": "رئال بتیس",
+    "Celta Vigo": "سلتاویگو",
+    "Valencia": "والنسیا",
+    "Getafe": "ختافه",
+    "Espanyol": "اسپانیول",
+    "Osasuna": "اوساسونا",
+    "Girona": "خیرونا",
+    "Rayo Vallecano": "رایو وایکانو",
+    "Mallorca": "مایورکا",
+    "Alavés": "آلاوز",
+    "Las Palmas": "لاس پالماس",
+    "Liverpool": "لیورپول",
+    "Manchester City": "منچستر سیتی",
+    "Bayern München": "بایرن مونیخ",
+    "PSG": "پاری سن ژرمن",
+    "Juventus": "یوونتوس",
+    "Inter": "اینترمیلان",
+    "AC Milan": "آث میلان",
+    "Borussia Dortmund": "دورتموند",
+    "Benfica": "بنفیکا",
 }
 
 # Global variables for live updates
@@ -93,7 +116,7 @@ def format_event_farsi(event):
 
 
 # Fetch Ongoing Game Fixture ID
-def fetch_live_fixture(team_id=40):  # Default is Real Madrid
+def fetch_live_fixture(team_id=40):  #Real Madrid
     url = f"https://api-football-v1.p.rapidapi.com/v3/fixtures?live=all&team={team_id}"
     response = requests.get(url, headers=HEADERS)
     if response.status_code == 200:
@@ -117,29 +140,29 @@ async def send_live_updates(context: ContextTypes.DEFAULT_TYPE,
     is_live_update_running = True
 
     while is_live_update_running:
-        print("Checking for new events...")  # Debugging log
+        #print("Checking for new events...")  # Debugging log
         events = fetch_events(fixture_id)
 
         for event in events:
-            # Generate a unique key for each event using multiple attributes
+            # Generate a unique key for each event using multiple attributes // GPT
             event_key = f"{event['time']['elapsed']}_{event['team']['name']}_{event['type']}_{event.get('player', {}).get('name', '')}"
             if event_key not in sent_events:  # Check if the event is new
                 sent_events.add(event_key)  # Mark the event as sent
                 message = format_event_farsi(event)
-                print(f"Sending message: {message}")  # Debugging log
+                #print(f"Sending message: {message}")  # Debugging log
                 await context.bot.send_message(chat_id=CHANNEL_ID,
                                                text=message)
 
-        await asyncio.sleep(30)  # Wait for 30 seconds before checking again
+        await asyncio.sleep(30)  # Live event checkin frequency
 
 
-# Telegram Command: /start
+# Command: /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "خوش آمدید! شما می‌توانید از دستورات /live و /stop استفاده کنید.")
 
 
-# Telegram Command: /live
+# Command: /live
 async def live(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global is_live_update_running, sent_events
 
@@ -158,7 +181,7 @@ async def live(update: Update, context: ContextTypes.DEFAULT_TYPE):
     asyncio.create_task(send_live_updates(context, fixture_id))
 
 
-# Telegram Command: /stop
+# Command: /stop
 async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global is_live_update_running
     if not is_live_update_running:
@@ -173,7 +196,7 @@ async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def main():
     application = ApplicationBuilder().token(BOT_TOKEN).build()
 
-    # Add command handlers
+    # command handlers
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("live", live))
     application.add_handler(CommandHandler("stop", stop))
