@@ -6,8 +6,14 @@ import sys
 from flask import Flask
 import threading
 import nest_asyncio
+import os
+from dotenv import load_dotenv
 
 REAL_MADRID_ID = 541
+
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Apply nest_asyncio
 nest_asyncio.apply()
@@ -16,8 +22,8 @@ nest_asyncio.apply()
 sys.path.insert(0, "libs")
 
 # API and Bot Configuration
-API_KEY = "6a3d20782bmsh74bb0e39633d701p1e82f2jsnf2647fda28bd"
-BOT_TOKEN = "8061695627:AAHGAo4SUZsZFcAWH_MPc8P0jDMMq-LTixA"
+API_KEY = os.getenv("API_KEY")
+BOT_TOKEN = os.getenv("BOT_TOKEN") 
 CHANNEL_ID = "@TestWSbotter"
 HEADERS = {
     "x-rapidapi-host": "api-football-v1.p.rapidapi.com",
@@ -27,18 +33,19 @@ HEADERS = {
 # Flask keep-alive
 app = Flask("")
 
+# Global variables
+is_live_update_running = False
+sent_events = set()  # Track already sent events
+bot_operational = False  # Track if the bot is operational
 
+# Flask endpoint to check bot status
 @app.route("/")
 def home():
-    global is_live_update_running
-    try:
-        if is_live_update_running:
-            return "✅ Bot is running and sending live updates!", 200
-        else:
-            return "❌ Bot is not running or live updates are stopped.", 503
-    except Exception as e:
-        print(f"Error occurred in / endpoint: {e}")
-        return "❌ Unexpected error occurred.", 500
+    global bot_operational
+    if not bot_operational:
+        return "❌ Bot is not running.", 503
+    return "✅ Bot is running!", 200
+
 
 def run():
     app.run(host="0.0.0.0", port=8080)
@@ -77,19 +84,12 @@ TEAM_NAMES_FARSI = {
     "Benfica": "بنفیکا",
 }
 
-# Global variables for live updates
-is_live_update_running = False
-sent_events = set()  # Track already sent events
-
-
 # Fetch Events for a Given Fixture
 def fetch_events(fixture_id):
     url = f"https://api-football-v1.p.rapidapi.com/v3/fixtures/events?fixture={fixture_id}"
     response = requests.get(url, headers=HEADERS, timeout=10)
     if response.status_code == 200:
-        events = response.json()["response"]
-        print(f"Fetched events: {events}")  # Debugging log
-        return events
+        return response.json()["response"]
     else:
         print(f"Error fetching events: {response.status_code}")
         return []
@@ -132,8 +132,9 @@ def format_event_farsi(event):
     else:
         return f"رویداد دیگر ({event_type}) برای {team_farsi} در دقیقه {time}"
 
+
 # Fetch Ongoing Game Fixture ID
-def fetch_live_fixture(team_id=40):  #Real Madrid
+def fetch_live_fixture(team_id=REAL_MADRID_ID):
     url = f"https://api-football-v1.p.rapidapi.com/v3/fixtures?live=all&team={team_id}"
     response = requests.get(url, headers=HEADERS)
     if response.status_code == 200:
@@ -157,24 +158,23 @@ async def send_live_updates(context: ContextTypes.DEFAULT_TYPE,
     is_live_update_running = True
 
     while is_live_update_running:
-        #print("Checking for new events...")  # Debugging log
         events = fetch_events(fixture_id)
 
         for event in events:
-            # Generate a unique key for each event using multiple attributes // GPT
+            # Generate a unique key for each event using multiple attributes
             event_key = f"{event['time']['elapsed']}_{event['team']['name']}_{event['type']}_{event.get('player', {}).get('name', '')}"
             if event_key not in sent_events:  # Check if the event is new
                 sent_events.add(event_key)  # Mark the event as sent
                 message = format_event_farsi(event)
-                #print(f"Sending message: {message}")  # Debugging log
-                await context.bot.send_message(chat_id=CHANNEL_ID,
-                                               text=message)
+                await context.bot.send_message(chat_id=CHANNEL_ID, text=message)
 
         await asyncio.sleep(30)  # Live event checkin frequency
 
 
 # Command: /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global bot_operational
+    bot_operational = True  # Set bot as operational when it starts
     await update.message.reply_text(
         "خوش آمدید! شما می‌توانید از دستورات /live و /stop استفاده کنید.")
 
@@ -211,15 +211,23 @@ async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Main Bot Setup
 async def main():
+    global bot_operational
+    bot_operational = True  # Mark bot as operational when the bot is running
+
     application = ApplicationBuilder().token(BOT_TOKEN).build()
 
-    # command handlers
+    # Command handlers
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("live", live))
     application.add_handler(CommandHandler("stop", stop))
 
     # Run the bot
-    await application.run_polling()
+    try:
+        await application.run_polling()
+    except Exception as e:
+        print(f"Error occurred: {e}")
+    finally:
+        bot_operational = False  # Set to False if the bot stops
 
 
 if __name__ == "__main__":
