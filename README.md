@@ -120,3 +120,5 @@ The bot should:
 1. TBD
 
 ---
+# Bot Status
+- https://stats.uptimerobot.com/t2bYCOQ6zV
