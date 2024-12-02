@@ -1,7 +1,5 @@
 # WhiteStrongs_Bot
 
-# **WhiteStrongs Bot**
-
 ## **Case Study: Real-Time Telegram Bot for Live Football Updates**
 
 ### **Objective**
