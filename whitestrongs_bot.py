@@ -225,16 +225,32 @@ async def live(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Command: /prev
 async def prev(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Fetch the previous fixture ID
     fixture_id = fetch_previous_fixture()
-    if fixture_id:
-        await update.message.reply_text(
-            f"آخرین بازی تیم با شناسه فیکسچر: {fixture_id}"
-        )
-    else:
+    if not fixture_id:
         await update.message.reply_text(
             "هیچ بازی قبلی پیدا نشد. لطفاً مطمئن شوید تیم بازی کرده است."
         )
-        
+        return
+
+    # Fetch events for the previous fixture
+    events = fetch_events(fixture_id)
+    if not events:
+        await update.message.reply_text(
+            "هیچ رویدادی برای بازی قبلی یافت نشد."
+        )
+        return
+
+    # Format and send all events
+    messages = []
+    for event in events:
+        formatted_event = format_event_farsi(event)
+        messages.append(formatted_event)
+
+    # Send all messages (split to avoid Telegram's message length limit)
+    for message in messages:
+        await update.message.reply_text(message)
+
 # Command: /stop
 async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global is_live_update_running
