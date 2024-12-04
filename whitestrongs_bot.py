@@ -95,12 +95,25 @@ def fetch_events(fixture_id):
         return []
 
 
+# Fetch Previous Game Fixture ID
+def fetch_previous_fixture(team_id=40):  # Default is Liverpool
+    try:
+        url = f"https://api-football-v1.p.rapidapi.com/v3/fixtures?last=1&team={team_id}"
+        response = requests.get(url, headers=HEADERS)
+        response.raise_for_status()
+        data = response.json().get("response", [])
+        return data[0]["fixture"]["id"] if data else None
+    except requests.RequestException as e:
+        print(f"Error fetching previous fixture: {e}")
+        return None
+
 # Format Events into Farsi Messages
 def format_event_farsi(event):
     time = event["time"]["elapsed"]
     team_id = event["team"]["id"]
     team_name = event["team"]["name"]
     player = event["player"]["name"]
+    assist = event.get("assist", {}).get("name") # For subs
     event_type = event["type"]
     detail = event["detail"]
 
@@ -109,28 +122,40 @@ def format_event_farsi(event):
 
     # Customize messages for goals
     if event_type == "Goal":
-        if team_id == REAL_MADRID_ID:  # If Real Madrid scores
-            return f"گللللللللللللل برای رئال مادرید! 🎉 توسط {player} در دقیقه {time}!"
-        else:  # If opponent scores
-            return f"گل برای {team_farsi} در دقیقه {time} توسط {player}"
+        if detail == "Normal Goal":
+            if team_id == REAL_MADRID_ID:  # If Real Madrid scores
+                return f"گللللللللللللل برای رئال مادرید! 🎉 توسط {player} در دقیقه {time}!"
+            else:  # If opponent scores
+                return f"گل برای {team_farsi} در دقیقه {time} توسط {player}"
+        elif detail == "Missed Penalty":
+            return f"پنالتی برای {player} از تیم {team_farsi} از دست رفت در دقیقه {time}!"
 
     # Translate card type
-    if detail == "Yellow Card":
-        detail_farsi = "کارت زرد"
-    elif detail == "Red Card":
-        detail_farsi = "کارت قرمز"
-    else:
-        detail_farsi = detail
+    # if detail == "Yellow Card":
+    #     detail_farsi = "کارت زرد"
+    # elif detail == "Red Card":
+    #     detail_farsi = "کارت قرمز"
+    # else:
+    #     detail_farsi = detail
 
-    # Handle cards
+# Handle cards
     if event_type == "Card":
+        # Translate card type
+        detail_farsi = "کارت زرد" if detail == "Yellow Card" else "کارت قرمز" if detail == "Red Card" else detail
         return f"کارت {detail_farsi} برای {player} از تیم {team_farsi} در دقیقه {time}"
-    # Handle substitutions
+
+# Handle substitutions
     elif event_type == "subst":
-        return f"تعویض برای {team_farsi}: {player} وارد بازی شد در دقیقه {time}"
-    # Handle other events
+    # Format substitution message
+        if assist:  # outgoing player is specified - GPT
+            return f"تعویض برای {team_farsi} در دقیقه {time}:\n{player} 🟢\n{assist} 🔴"
+        else:  # no outgoing player specified - GPT
+            return f"تعویض برای {team_farsi}: {player} وارد بازی شد در دقیقه {time}"
+
+# Handle other events
     else:
         return f"رویداد دیگر ({event_type}) برای {team_farsi} در دقیقه {time}"
+
 
 
 # Fetch Ongoing Game Fixture ID
@@ -162,13 +187,13 @@ async def send_live_updates(context: ContextTypes.DEFAULT_TYPE,
 
         for event in events:
             # Generate a unique key for each event using multiple attributes
-            event_key = f"{event['time']['elapsed']}_{event['team']['name']}_{event['type']}_{event.get('player', {}).get('name', '')}"
+            event_key = f"{event['time']['elapsed']}_{event.get('team', {}).get('id', '')}_{event['type']}_{event['detail']}_{event.get('player', {}).get('id', '')}"
             if event_key not in sent_events:  # Check if the event is new
                 sent_events.add(event_key)  # Mark the event as sent
                 message = format_event_farsi(event)
                 await context.bot.send_message(chat_id=CHANNEL_ID, text=message)
 
-        await asyncio.sleep(30)  # Live event checkin frequency
+        await asyncio.sleep(70)  # Live event checkin frequency
 
 
 # Command: /start
@@ -196,6 +221,7 @@ async def live(update: Update, context: ContextTypes.DEFAULT_TYPE):
     sent_events.clear()  # Clear previously sent events for a new live session
     await update.message.reply_text("آپدیت زنده شروع شد.")
     asyncio.create_task(send_live_updates(context, fixture_id))
+
 
 
 # Command: /stop
