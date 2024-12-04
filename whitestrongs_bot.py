@@ -96,7 +96,7 @@ def fetch_events(fixture_id):
 
 
 # Fetch Previous Game Fixture ID
-def fetch_previous_fixture(team_id=40):  # Default is Liverpool
+def fetch_previous_fixture(team_id=541):  # Real Madrid
     try:
         url = f"https://api-football-v1.p.rapidapi.com/v3/fixtures?last=1&team={team_id}"
         response = requests.get(url, headers=HEADERS)
@@ -246,6 +246,7 @@ async def main():
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("live", live))
     application.add_handler(CommandHandler("stop", stop))
+    application.add_handler(CommandHandler("prev", fetch_previous_fixture))
 
     # Run the bot
     try:
