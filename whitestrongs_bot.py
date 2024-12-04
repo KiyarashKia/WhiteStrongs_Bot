@@ -141,7 +141,7 @@ def format_event_farsi(event):
 # Handle cards
     if event_type == "Card":
         # Translate card type
-        detail_farsi = "کارت زرد" if detail == "Yellow Card" else "کارت قرمز" if detail == "Red Card" else detail
+        detail_farsi = "🟨 زرد" if detail == "Yellow Card" else "🟥 قرمز" if detail == "Red Card" else detail
         return f"کارت {detail_farsi} برای {player} از تیم {team_farsi} در دقیقه {time}"
 
 # Handle substitutions
