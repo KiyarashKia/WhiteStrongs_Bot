@@ -223,7 +223,18 @@ async def live(update: Update, context: ContextTypes.DEFAULT_TYPE):
     asyncio.create_task(send_live_updates(context, fixture_id))
 
 
-
+# Command: /prev
+async def prev(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    fixture_id = fetch_previous_fixture()
+    if fixture_id:
+        await update.message.reply_text(
+            f"آخرین بازی تیم با شناسه فیکسچر: {fixture_id}"
+        )
+    else:
+        await update.message.reply_text(
+            "هیچ بازی قبلی پیدا نشد. لطفاً مطمئن شوید تیم بازی کرده است."
+        )
+        
 # Command: /stop
 async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global is_live_update_running
@@ -246,7 +257,7 @@ async def main():
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("live", live))
     application.add_handler(CommandHandler("stop", stop))
-    application.add_handler(CommandHandler("prev", fetch_previous_fixture))
+    application.add_handler(CommandHandler("prev", prev))
 
     # Run the bot
     try:
