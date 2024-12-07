@@ -1,3 +1,4 @@
+import time
 import requests
 import asyncio
 from telegram import Update
@@ -11,7 +12,6 @@ from dotenv import load_dotenv
 
 REAL_MADRID_ID = 541
 
-
 # Load environment variables from .env file
 load_dotenv()
 
@@ -23,7 +23,7 @@ sys.path.insert(0, "libs")
 
 # API and Bot Configuration
 API_KEY = os.getenv("API_KEY")
-BOT_TOKEN = os.getenv("BOT_TOKEN") 
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHANNEL_ID = "@TestWSbotter"
 HEADERS = {
     "x-rapidapi-host": "api-football-v1.p.rapidapi.com",
@@ -37,6 +37,7 @@ app = Flask("")
 is_live_update_running = False
 sent_events = set()  # Track already sent events
 bot_operational = False  # Track if the bot is operational
+
 
 # Flask endpoint to check bot status
 @app.route("/")
@@ -84,6 +85,7 @@ TEAM_NAMES_FARSI = {
     "Benfica": "بنفیکا",
 }
 
+
 # Fetch Events for a Given Fixture
 def fetch_events(fixture_id):
     url = f"https://api-football-v1.p.rapidapi.com/v3/fixtures/events?fixture={fixture_id}"
@@ -107,13 +109,14 @@ def fetch_previous_fixture(team_id=541):  # Real Madrid
         print(f"Error fetching previous fixture: {e}")
         return None
 
+
 # Format Events into Farsi Messages
 def format_event_farsi(event):
     time = event["time"]["elapsed"]
     team_id = event["team"]["id"]
     team_name = event["team"]["name"]
     player = event["player"]["name"]
-    assist = event.get("assist", {}).get("name") # For subs
+    assist = event.get("assist", {}).get("name")  # For subs
     event_type = event["type"]
     detail = event["detail"]
 
@@ -141,12 +144,12 @@ def format_event_farsi(event):
 # Handle cards
     if event_type == "Card":
         # Translate card type
-        detail_farsi = "🟨 زرد" if detail == "Yellow Card" else "🟥 قرمز" if detail == "Red Card" else detail
+        detail_farsi = " زرد 🟨" if detail == "Yellow Card" else " قرمز 🟥" if detail == "Red Card" else detail
         return f"کارت {detail_farsi} برای {player} از تیم {team_farsi} در دقیقه {time}"
 
 # Handle substitutions
     elif event_type == "subst":
-    # Format substitution message
+        # Format substitution message
         if assist:  # outgoing player is specified - GPT
             return f"تعویض برای {team_farsi} در دقیقه {time}:\n{player} 🟢\n{assist} 🔴"
         else:  # no outgoing player specified - GPT
@@ -155,7 +158,6 @@ def format_event_farsi(event):
 # Handle other events
     else:
         return f"رویداد دیگر ({event_type}) برای {team_farsi} در دقیقه {time}"
-
 
 
 # Fetch Ongoing Game Fixture ID
@@ -186,14 +188,28 @@ async def send_live_updates(context: ContextTypes.DEFAULT_TYPE,
         events = fetch_events(fixture_id)
 
         for event in events:
-            # Generate a unique key for each event using multiple attributes
-            event_key = f"{event['time']['elapsed']}_{event.get('team', {}).get('id', '')}_{event['type']}_{event['detail']}_{event.get('player', {}).get('id', '')}"
-            if event_key not in sent_events:  # Check if the event is new
-                sent_events.add(event_key)  # Mark the event as sent
-                message = format_event_farsi(event)
-                await context.bot.send_message(chat_id=CHANNEL_ID, text=message)
+            # Generate a unique key for each event
+            event_key = f"{event['time']['elapsed']}_{event.get('team', {}).get('id', '')}_{event['type']}_{event['detail']}_{event.get('player', {}).get('id', '')}_{event.get('assist', {}).get('id', '')}"
 
-        await asyncio.sleep(70)  # Live event checkin frequency
+            # Check if the event has already been processed
+            if event_key in sent_events:
+                continue  # Skip already processed events
+
+            # Check if the event data is incomplete (e.g., unknown player)
+            if not event.get("player", {}).get("name"):
+                # Retry after 5 seconds if player is unknown
+                print(
+                    f"Incomplete event detected, retrying in 5 seconds: {event}"
+                )
+                await asyncio.sleep(5)
+                continue  # Skip processing for now and wait for the next cycle
+
+            # Mark the event as sent and process it
+            sent_events.add(event_key)
+            message = format_event_farsi(event)
+            await context.bot.send_message(chat_id=CHANNEL_ID, text=message)
+
+        await asyncio.sleep(70)  # Adjusted fetching interval
 
 
 # Command: /start
@@ -229,16 +245,13 @@ async def prev(update: Update, context: ContextTypes.DEFAULT_TYPE):
     fixture_id = fetch_previous_fixture()
     if not fixture_id:
         await update.message.reply_text(
-            "هیچ بازی قبلی پیدا نشد. لطفاً مطمئن شوید تیم بازی کرده است."
-        )
+            "هیچ بازی قبلی پیدا نشد. لطفاً مطمئن شوید تیم بازی کرده است.")
         return
 
     # Fetch events for the previous fixture
     events = fetch_events(fixture_id)
     if not events:
-        await update.message.reply_text(
-            "هیچ رویدادی برای بازی قبلی یافت نشد."
-        )
+        await update.message.reply_text("هیچ رویدادی برای بازی قبلی یافت نشد.")
         return
 
     # Format and send all events
@@ -250,6 +263,7 @@ async def prev(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Send all messages (split to avoid Telegram's message length limit)
     for message in messages:
         await update.message.reply_text(message)
+
 
 # Command: /stop
 async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE):
