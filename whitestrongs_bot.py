@@ -85,6 +85,43 @@ TEAM_NAMES_FARSI = {
     "Benfica": "بنفیکا",
 }
 
+# Farsi Player Names 2024-25
+PLAYER_NAMES_FARSI = {
+    "T. Courtois": "تیبو کورتوا",
+    "A. Lunin": "آندری لونین",
+    "F. González": "فران گونزالس",
+    "S. Mestre": "سرخیو مستره",
+    "D. Carvajal": "دنی کارواخال",
+    "É. Militão": "ادر میلیتائو",
+    "D. Alaba": "داوید آلابا",
+    "J. Vallejo": "خسوس وایخو",
+    "F. García": "فران گارسیا",
+    "A. Rüdiger": "آنتونیو رودیگر",
+    "F. Mendy": "فرلاند مندی",
+    "J. Ramón": "خاکوبو رامون",
+    "R. Asencio": "رائول آسنسیو",
+    "D. Jiménez": "داوید خیمنز",
+    "L. Aguado": "لورنزو آگوادو",
+    "D. Aguado": "دیه‌گو آگوادو",
+    "J. Bellingham": "جود بلینگهام",
+    "E. Camavinga": "ادواردو کاماوینگا",
+    "F. Valverde": "فدریکو والورده",
+    "L. Modric": "لوکا مودریچ",
+    "A. Tchouaméni": "اوریلین شوامنی",
+    "A. Güler": "آردا گولر",
+    "L. Vázquez": "لوکاس وازکز",
+    "D. Ceballos": "دنی سبایوس",
+    "B. Díaz": "براهیم دیاز",
+    "C. Andrés": "چما آندرس",
+    "H. De Llanos": "هوگو دلانوس",
+    "V. Júnior": "وینیسیوس جونیور",
+    "K. Mbappé": "کیلیان امباپه",
+    "Rodrygo": "رودریگو",
+    "Endrick": "اندریک",
+    "G. García": "گونزالو گارسیا",
+    "D. Yáñez": "دنیل یانز"
+}
+
 
 # Fetch Events for a Given Fixture
 def fetch_events(fixture_id):
@@ -115,23 +152,25 @@ def format_event_farsi(event):
     time = event["time"]["elapsed"]
     team_id = event["team"]["id"]
     team_name = event["team"]["name"]
-    player = event["player"]["name"]
-    assist = event.get("assist", {}).get("name")  # For subs
+    player = event.get("player", {}).get("name", "unknown")
+    assist = event.get("assist", {}).get("name", None)  # For substitutions
     event_type = event["type"]
     detail = event["detail"]
 
-    # Translate team name to Farsi
+    # Translate team and player names to Farsi
     team_farsi = TEAM_NAMES_FARSI.get(team_name, team_name)
+    player_farsi = PLAYER_NAMES_FARSI.get(player, player)
+    assist_farsi = PLAYER_NAMES_FARSI.get(assist, assist) if assist else None
 
     # Customize messages for goals
     if event_type == "Goal":
         if detail == "Normal Goal":
             if team_id == REAL_MADRID_ID:  # If Real Madrid scores
-                return f"گللللللللللللل برای رئال مادرید! 🎉 توسط {player} در دقیقه {time}!"
+                return f"گللللللللللللل 🎉🎉🎉🎉 ! {player_farsi} در دقیقه {time}!"
             else:  # If opponent scores
-                return f"گل برای {team_farsi} در دقیقه {time} توسط {player}"
+                return f"گل برای {team_farsi} در دقیقه {time} توسط {player_farsi}"
         elif detail == "Missed Penalty":
-            return f"پنالتی برای {player} از تیم {team_farsi} از دست رفت در دقیقه {time}!"
+            return f"پنالتی برای {player_farsi} از تیم {team_farsi} از دست رفت در دقیقه {time}!"
 
     # Translate card type
     # if detail == "Yellow Card":
@@ -143,19 +182,17 @@ def format_event_farsi(event):
 
 # Handle cards
     if event_type == "Card":
-        # Translate card type
-        detail_farsi = " زرد 🟨" if detail == "Yellow Card" else " قرمز 🟥" if detail == "Red Card" else detail
-        return f"کارت {detail_farsi} برای {player} از تیم {team_farsi} در دقیقه {time}"
+        detail_farsi = "زرد 🟨" if detail == "Yellow Card" else "قرمز 🟥" if detail == "Red Card" else detail
+        return f"کارت {detail_farsi} برای {player_farsi} از تیم {team_farsi} در دقیقه {time}"
 
 # Handle substitutions
     elif event_type == "subst":
-        # Format substitution message
-        if assist:  # outgoing player is specified - GPT
-            return f"تعویض برای {team_farsi} در دقیقه {time}:\n{player} 🟢\n{assist} 🔴"
-        else:  # no outgoing player specified - GPT
-            return f"تعویض برای {team_farsi}: {player} وارد بازی شد در دقیقه {time}"
+        if assist_farsi:  # Include outgoing player if available
+            return f"تعویض برای {team_farsi} در دقیقه {time}:\n{player_farsi} 🟢\n{assist_farsi} 🔴"
+        else:  # No outgoing player specified
+            return f"تعویض برای {team_farsi}: {player_farsi} وارد بازی شد در دقیقه {time}"
 
-# Handle other events
+    # Handle other events
     else:
         return f"رویداد دیگر ({event_type}) برای {team_farsi} در دقیقه {time}"
 
