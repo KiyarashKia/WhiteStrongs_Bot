@@ -114,7 +114,7 @@ PLAYER_NAMES_FARSI = {
     "B. Diaz": "براهیم دیاز",
     "C. Andres": "چما آندرس",
     "H.De Llanos": "هوگو دلانوس",
-    "V. Junior": "وینیسیوس جونیور",
+    "Vinicius Junior": "وینیسیوس جونیور",
     "K. Mbappe": "کیلیان امباپه",
     "Rodrygo": "رودریگو",
     "Endrick": "اندریک",
@@ -149,45 +149,33 @@ def fetch_previous_fixture(team_id=541):  # Real Madrid
         return None
 
 
-# Format Events into Farsi Messages
 def format_event_farsi(event):
     time = event["time"]["elapsed"]
-    team_id = event["team"]["id"]
+    team_id = event["team"]["id"]  # Identify the team that caused the event
     team_name = event["team"]["name"]
-    player = event.get("player", {}).get("name", "unknown")
-    assist = event.get("assist", {}).get("name", None)  # For substitutions
+    player = event.get("player", {}).get("name", "unknown")  # Default to "unknown" if player name is missing
+    assist = event.get("assist", {}).get("name", None)  # For substitutions or assists
     event_type = event["type"]
-    detail = event["detail"]
+    detail = event.get("detail", "")
 
     # Translate team and player names to Farsi
     team_farsi = TEAM_NAMES_FARSI.get(team_name, team_name)
-    player_farsi = PLAYER_NAMES_FARSI.get(player, player)
+    player_farsi = PLAYER_NAMES_FARSI.get(player, player)  # Use English name if Farsi is not found
     assist_farsi = PLAYER_NAMES_FARSI.get(assist, assist) if assist else None
 
     # Customize messages for goals
-    if event_type == "Goal":
-        if detail == "Normal Goal":
-            if team_id == REAL_MADRID_ID:  # If Real Madrid scores
-                return f"گللللللللللللل 🎉🎉🎉🎉 ! {player_farsi} در دقیقه {time}!"
-            else:  # If opponent scores
-                return f"گل برای {team_farsi} در دقیقه {time} توسط {player_farsi}"
-        elif detail == "Missed Penalty":
-            return f"پنالتی برای {player_farsi} از تیم {team_farsi} از دست رفت در دقیقه {time}!"
+    if event_type == "Goal":  # Check if the event is a goal
+        if team_id == REAL_MADRID_ID:  # If Real Madrid scores
+            return f"گللللللللللللل 🎉🎉🎉🎉 ! {player_farsi} در دقیقه {time}!"
+        else:  # If the opponent scores
+            return f"گل برای {team_farsi} در دقیقه {time} توسط {player_farsi}"
 
-    # Translate card type
-    # if detail == "Yellow Card":
-    #     detail_farsi = "کارت زرد"
-    # elif detail == "Red Card":
-    #     detail_farsi = "کارت قرمز"
-    # else:
-    #     detail_farsi = detail
-
-# Handle cards
+    # Handle cards
     if event_type == "Card":
         detail_farsi = "زرد 🟨" if detail == "Yellow Card" else "قرمز 🟥" if detail == "Red Card" else detail
         return f"کارت {detail_farsi} برای {player_farsi} از تیم {team_farsi} در دقیقه {time}"
 
-# Handle substitutions
+    # Handle substitutions
     elif event_type == "subst":
         if assist_farsi:  # Include outgoing player if available
             return f"تعویض برای {team_farsi} در دقیقه {time}:\n{player_farsi} 🟢\n{assist_farsi} 🔴"
@@ -197,6 +185,7 @@ def format_event_farsi(event):
     # Handle other events
     else:
         return f"رویداد دیگر ({event_type}) برای {team_farsi} در دقیقه {time}"
+
 
 
 # Fetch Ongoing Game Fixture ID
